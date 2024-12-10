@@ -3,159 +3,152 @@
 #include <cmath>
 using namespace std;
 
-class Polynomial;	//forward declaration
+class Polynomial; // 前置宣告
 
 class Term {
-	friend Polynomial;
-	private:
-		float coef;	//coefficient
-		int exp;	//exponent
+    friend Polynomial;
+    friend ostream& operator<<(ostream& out, const Polynomial& p);
+    friend istream& operator>>(istream& in, Polynomial& p);
+
+private:
+    float coef; // 系數
+    int exp;    // 指數
 };
 
 class Polynomial {
-	private:
-		Term *termArray;	//array of nonzero terms
-		int capacity;	//size of termArray
-		int terms;	//number of nonzero terms
-	public:
-		Polynomial(int C = 0, int T = 0) : capacity(C), terms(T) {	//constructor.
-			termArray = new Term[capacity];
-		}
-		//construct the polynomial p(x) = 0;
-		void showTerm();
-		//To show the polynomial.
-		void NewTerm(const float theCoeff, const int theExp);
-		//Add a new term to the end of termArray.
-		Polynomial Add(Polynomial poly);
-		//Return the sum of the polynomials *this and poly.
-		Polynomial Mult(Polynomial poly);
-		//Return the product of the polynomials *this and poly.
-		float Eval(float f);
-		//Evaluate the polynomial *this at f and return the result.
+private:
+    Term* termArray; // 非零項的陣列
+    int capacity;    // 陣列的大小
+    int terms;       // 非零項的數量
+
+public:
+    Polynomial(int C = 10, int T = 0) : capacity(C), terms(T) {
+        termArray = new Term[capacity];
+    }
+
+    ~Polynomial() { delete[] termArray; }
+
+    void NewTerm(const float theCoeff, const int theExp); // 新增一個新項目
+    Polynomial Add(Polynomial poly);                     // 多項式加法
+    Polynomial Mult(Polynomial poly);                    // 多項式乘法
+    float Eval(float f);                                 // 計算多項式值
+
+    friend ostream& operator<<(ostream& out, const Polynomial& p);
+    friend istream& operator>>(istream& in, Polynomial& p);
 };
 
-void Polynomial::showTerm() {	//To show the polynomial.
-	for(int j=0;j<terms;j++) {
-		if((int)termArray[j].coef != 0 && (int)termArray[j].exp > 0) cout<<termArray[j].coef<<"x^"<<termArray[j].exp;
-		else if(termArray[j].exp == 0) cout<<termArray[j].coef;
-		else continue;
-		if(j==terms-1) break;
-		cout<<" + ";
-	}
+void Polynomial::NewTerm(const float theCoeff, const int theExp) {
+    if (terms == capacity) {
+        capacity *= 2;
+        Term* temp = new Term[capacity];
+        copy(termArray, termArray + terms, temp);
+        delete[] termArray;
+        termArray = temp;
+    }
+    termArray[terms].coef = theCoeff;
+    termArray[terms++].exp = theExp;
 }
 
-Polynomial Polynomial::Add(Polynomial b) {	//Return the sum of the polynomials *this and b.
-	Polynomial c;
-	int aPos = 0, bPos = 0;
-	while((aPos<terms) && (bPos<b.terms)) {
-		if((termArray[aPos].exp==b.termArray[bPos].exp)) {
-			float t = termArray[aPos].coef + b.termArray[bPos].coef;
-			if(t) c.NewTerm(t, termArray[aPos].exp);
-			aPos++; bPos++;
-		}
-		else if((termArray[aPos].exp<b.termArray[bPos].exp)) {
-			c.NewTerm(b.termArray[bPos].coef, b.termArray[bPos].exp);
-			bPos++;
-		}
-		else {
-			c.NewTerm(termArray[aPos].coef, termArray[aPos].exp);
-			aPos++;
-		}
-	} 
-	for(;aPos<terms;aPos++) c.NewTerm(termArray[aPos].coef, termArray[aPos].exp);
-	for(;bPos<b.terms;bPos++) c.NewTerm(b.termArray[bPos].coef, b.termArray[bPos].exp);
-	return c;
+Polynomial Polynomial::Add(Polynomial b) {
+    Polynomial c;
+    int aPos = 0, bPos = 0;
+    while (aPos < terms && bPos < b.terms) {
+        if (termArray[aPos].exp == b.termArray[bPos].exp) {
+            float t = termArray[aPos].coef + b.termArray[bPos].coef;
+            if (t) c.NewTerm(t, termArray[aPos].exp);
+            aPos++;
+            bPos++;
+        } else if (termArray[aPos].exp < b.termArray[bPos].exp) {
+            c.NewTerm(b.termArray[bPos].coef, b.termArray[bPos].exp);
+            bPos++;
+        } else {
+            c.NewTerm(termArray[aPos].coef, termArray[aPos].exp);
+            aPos++;
+        }
+    }
+    for (; aPos < terms; aPos++) c.NewTerm(termArray[aPos].coef, termArray[aPos].exp);
+    for (; bPos < b.terms; bPos++) c.NewTerm(b.termArray[bPos].coef, b.termArray[bPos].exp);
+    return c;
 }
 
-Polynomial Polynomial::Mult(Polynomial b) {	//Return the product of the polynomials *this and b.
-	Polynomial d;
-	int aPos = 0, bPos = 0, dPos = 0, temp, count = 0;
-	float temp1;
-	for(aPos=0;aPos<terms;aPos++) {
-		for(bPos=0;bPos<b.terms;bPos++)	{
-		    float t=termArray[aPos].coef*b.termArray[bPos].coef;
-			int r=termArray[aPos].exp+b.termArray[bPos].exp;
-		    if(r>=0) d.NewTerm(t,r);
-		}
-	}
-	for(int i=0;i<d.terms;i++) {
-	    for(int j=i+1;j<=d.terms;j++) {
-		   	if(d.termArray[i].exp<d.termArray[j].exp) {
-		   	    temp=d.termArray[i].exp;
-		   	    d.termArray[i].exp=d.termArray[j].exp;
-		   	    d.termArray[j].exp=temp;
-		   	    temp1=d.termArray[i].coef;
-		   	    d.termArray[i].coef=d.termArray[j].coef;
-		   	    d.termArray[j].coef=temp1;	
-			}
-			if(d.termArray[i].exp==d.termArray[j].exp && d.termArray[i].exp>0) {    
-				temp1=d.termArray[i].coef+d.termArray[j].coef;
-				d.termArray[i].coef=temp1;
-			    for(int k=j;k<d.terms;k++) {
-					d.termArray[k]=d.termArray[++k];
-					k--;
-			    }
-				d.terms--;
-			}
-	    }
+Polynomial Polynomial::Mult(Polynomial b) {
+    Polynomial d;
+    for (int aPos = 0; aPos < terms; aPos++) {
+        for (int bPos = 0; bPos < b.terms; bPos++) {
+            float t = termArray[aPos].coef * b.termArray[bPos].coef;
+            int r = termArray[aPos].exp + b.termArray[bPos].exp;
+            d.NewTerm(t, r);
+        }
     }
     return d;
 }
 
-float Polynomial::Eval(float f) {	//Evaluate the polynomial *this at f and return the result.
-	float sum = 0;
-	for(int i=0;i<terms;i++) sum+= termArray[i].coef*pow(f,termArray[i].exp);
-	return sum;
+float Polynomial::Eval(float f) {
+    float sum = 0;
+    for (int i = 0; i < terms; i++) sum += termArray[i].coef * pow(f, termArray[i].exp);
+    return sum;
 }
 
-void Polynomial::NewTerm(const float theCoeff, const int theExp) {	//Add a new term to the end of termArray.
-	if(terms == capacity) {	//double capacity of termArray
-		capacity*=2;
-		Term *temp = new Term[capacity];	//new array
-		copy(termArray, termArray + terms, temp);
-		delete [] termArray;	//deallocate old memory
-		termArray = temp;
-	}
-	termArray[terms].coef = theCoeff;
-	termArray[terms++].exp = theExp;
+ostream& operator<<(ostream& out, const Polynomial& p) {
+    if (p.terms == 0) {
+        out << "0";
+        return out;
+    }
+    for (int i = 0; i < p.terms; i++) {
+        if (i > 0 && p.termArray[i].coef > 0) out << " + ";
+        if (p.termArray[i].exp == 0)
+            out << p.termArray[i].coef;
+        else if (p.termArray[i].exp == 1)
+            out << p.termArray[i].coef << "x";
+        else
+            out << p.termArray[i].coef << "x^" << p.termArray[i].exp;
+    }
+    return out;
+}
+
+istream& operator>>(istream& in, Polynomial& p) {
+    cout << "請輸入多項式的項數：";
+    in >> p.terms;
+    if (p.terms > p.capacity) {
+        delete[] p.termArray;
+        p.capacity = p.terms;
+        p.termArray = new Term[p.capacity];
+    }
+    cout << "依次輸入每一項的系數和指數（例如：3 2 代表 3x^2）：\n";
+    for (int i = 0; i < p.terms; i++) {
+        cout << "第 " << i + 1 << " 項：";
+        in >> p.termArray[i].coef >> p.termArray[i].exp;
+    }
+    return in;
 }
 
 int main() {
-	int capacity, terms, exponent;
-	float coefficient, f;
-	cout<<"Enter the capacity and number of terms for this polynomial(p1): ";
-	cin>>capacity>>terms;
-	Polynomial p(capacity);
-	for(int i=0;i<terms;i++) {
-		cout<<"Enter the coefficient and its exponent: ";
-		cin>>coefficient>>exponent;
-		p.NewTerm(coefficient ,exponent);
-	}
-	cout<<"p1(x) = ";
-	p.showTerm();
-	cout<<'\n';
-	cout<<"Enter the capacity and number of terms for another polynomial(p2): ";
-	cin>>capacity>>terms;
-	Polynomial p2(capacity);
-	for(int i=0;i<terms;i++) {
-		cout<<"Enter the coefficient and its exponent: ";
-		cin>>coefficient>>exponent;
-		p2.NewTerm(coefficient ,exponent);
-	}
-	cout<<"p2(x) = ";
-	p2.showTerm();
-	cout<<'\n';
-	cout<<"The sum of p1 and p2 = ";
-	p.Add(p2).showTerm();
-	cout<<'\n';
-	cout<<"The product of p1 and p2 = ";
-	p.Mult(p2).showTerm();
-	cout<<'\n';
-	cout<<"Enter a number(the value of x) to evaluate the polynomial : ";
-	cin>>f;
-	cout<<"p1(x) = "<<p.Eval(f)<<endl;
-	cout<<"p2(x) = "<<p2.Eval(f)<<endl;
-	cout<<"p1(x) + p2(x) = "<<p.Eval(f)+p2.Eval(f)<<endl;
-	cout<<"p1(x) * p2(x) = "<<p.Eval(f)*p2.Eval(f)<<endl;
-	return 0;
+    Polynomial p1, p2;
+    cout << "輸入第一個多項式 (p1)：\n";
+    cin >> p1;
+
+    cout << "p1(x) = " << p1 << endl;
+
+    cout << "輸入第二個多項式 (p2)：\n";
+    cin >> p2;
+
+    cout << "p2(x) = " << p2 << endl;
+
+    Polynomial sum = p1.Add(p2);
+    cout << "p1(x) + p2(x) = " << sum << endl;
+
+    Polynomial product = p1.Mult(p2);
+    cout << "p1(x) * p2(x) = " << product << endl;
+
+    float x;
+    cout << "輸入 x 的值以計算多項式的結果：";
+    cin >> x;
+
+    cout << "p1(" << x << ") = " << p1.Eval(x) << endl;
+    cout << "p2(" << x << ") = " << p2.Eval(x) << endl;
+    cout << "p1(" << x << ") + p2(" << x << ") = " << p1.Eval(x) + p2.Eval(x) << endl;
+    cout << "p1(" << x << ") * p2(" << x << ") = " << p1.Eval(x) * p2.Eval(x) << endl;
+
+    return 0;
 }
+
